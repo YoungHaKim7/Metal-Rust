@@ -38,3 +38,4 @@ pub use metal::{
 pub use metal_fx::{
     SpatialScaler, SpatialScalerDescriptor, TemporalScaler, TemporalScalerDescriptor,
 };
+pub use quartz_core::{Drawable, Layer};

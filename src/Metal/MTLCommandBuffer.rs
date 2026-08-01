@@ -4,7 +4,7 @@ use super::{
     BlitCommandEncoder, CommandBufferStatus, ComputeCommandEncoder, ComputePassDescriptor,
     RenderCommandEncoder, RenderPassDescriptor,
 };
-use crate::Error;
+use crate::{Drawable, Error};
 use std::marker::PhantomData;
 
 /// A proof that a command buffer has completed synchronously.
@@ -67,6 +67,11 @@ impl CommandBuffer {
         CompletionToken {
             _command_buffer: PhantomData,
         }
+    }
+
+    /// Schedules a drawable for presentation when this command buffer runs.
+    pub fn present_drawable(&mut self, drawable: &Drawable) {
+        self.inner.present_drawable(&drawable.inner);
     }
 
     /// Returns the current command buffer state.

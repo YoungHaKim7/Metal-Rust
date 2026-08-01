@@ -5,9 +5,10 @@ use crate::metal::{
     BlitCommandEncoder, ComputeCommandEncoder, ComputePassDescriptor, RenderCommandEncoder,
     RenderPassDescriptor,
 };
+use crate::quartz_core::Drawable;
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
-use objc2_metal::MTLCommandBuffer;
+use objc2_metal::{MTLCommandBuffer, MTLDrawable};
 
 /// An owned Metal command buffer.
 pub struct CommandBuffer {
@@ -57,6 +58,12 @@ impl CommandBuffer {
     /// Waits synchronously until the command buffer completes.
     pub fn wait_until_completed(&self) {
         self.inner.waitUntilCompleted();
+    }
+
+    /// Schedules a drawable for presentation when this command buffer runs.
+    pub fn present_drawable(&mut self, drawable: &Drawable) {
+        let drawable = ProtocolObject::<dyn MTLDrawable>::from_ref(&*drawable.inner);
+        self.inner.presentDrawable(drawable);
     }
 
     /// Returns the current command buffer state.

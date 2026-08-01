@@ -16,6 +16,8 @@ mod foundation;
 mod metal;
 #[path = "MetalFX/MetalFX.rs"]
 mod metal_fx;
+#[path = "QuartzCore/QuartzCore.rs"]
+mod quartz_core;
 
 pub use foundation::Error;
 pub use metal::{
@@ -29,3 +31,4 @@ pub use metal::{
 pub use metal_fx::{
     SpatialScaler, SpatialScalerDescriptor, TemporalScaler, TemporalScalerDescriptor,
 };
+pub use quartz_core::{Drawable, Layer};
