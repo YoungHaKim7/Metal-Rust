@@ -7,9 +7,10 @@ rust-version.workspace = true
 repository.workspace = true
 description = "Audited Objective-C interoperability boundary for metal-rust"
 readme = "README.md"
+build = "build.rs"
 keywords = ["apple", "ffi", "metal", "metal4", "graphics"]
 categories = ["api-bindings", "graphics"]
-include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE"]
+include = ["/src/**", "/build.rs", "/Cargo.toml", "/README.md", "/LICENSE"]
 publish = ["crates-io"]
 
 [dependencies]

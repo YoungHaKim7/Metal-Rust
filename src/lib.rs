@@ -35,3 +35,6 @@ pub use metal::{
     RenderPipelineState, ResourceOptions, Size, StorageMode, Texture, TextureDescriptor,
     TextureType, TextureUsage, TimestampCounterHeap, Viewport,
 };
+pub use metal_fx::{
+    SpatialScaler, SpatialScalerDescriptor, TemporalScaler, TemporalScalerDescriptor,
+};

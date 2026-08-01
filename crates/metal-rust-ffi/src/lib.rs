@@ -14,6 +14,8 @@
 mod foundation;
 #[path = "Metal/Metal.rs"]
 mod metal;
+#[path = "MetalFX/MetalFX.rs"]
+mod metal_fx;
 
 pub use foundation::Error;
 pub use metal::{
@@ -23,4 +25,7 @@ pub use metal::{
     PrimitiveType, Region, RenderCommandEncoder, RenderPassDescriptor, RenderPipelineDescriptor,
     RenderPipelineState, ResourceOptions, Size, StorageMode, Texture, TextureDescriptor,
     TextureType, TextureUsage, TimestampCounterHeap, Viewport,
+};
+pub use metal_fx::{
+    SpatialScaler, SpatialScalerDescriptor, TemporalScaler, TemporalScalerDescriptor,
 };
