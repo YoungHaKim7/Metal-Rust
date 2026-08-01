@@ -4,12 +4,14 @@ use objc2::rc::Retained;
 use objc2_foundation::{NSString, NSURL};
 use objc2_metal::{MTLCaptureDescriptor, MTLCaptureDestination, MTLCaptureManager};
 
+/// An active device-wide Metal capture session.
 pub struct CaptureSession {
     manager: Retained<MTLCaptureManager>,
     active: bool,
 }
 
 impl CaptureSession {
+    /// Starts a GPU trace document capture at an absolute path.
     pub fn start(device: &Device, output_path: &str) -> Result<Self, Error> {
         // SAFETY: MTLCaptureManager is a process singleton. objc2 marks this
         // accessor unsafe because the generated ownership annotation cannot
@@ -36,6 +38,7 @@ impl CaptureSession {
         })
     }
 
+    /// Stops capture and consumes the session.
     pub fn finish(mut self) {
         self.stop();
     }

@@ -5,8 +5,10 @@ use objc2_foundation::NSRange;
 use objc2_metal::MTL4CounterHeap;
 use std::ops::Range;
 
+/// Maximum timestamp entries accepted by the safe Metal 4 wrapper.
 pub const MAX_TIMESTAMP_COUNTERS: usize = 4096;
 
+/// An owned Metal 4 timestamp counter heap.
 pub struct TimestampCounterHeap {
     inner: Retained<ProtocolObject<dyn MTL4CounterHeap>>,
     count: usize,
@@ -20,11 +22,13 @@ impl TimestampCounterHeap {
         Self { inner, count }
     }
 
+    /// Returns the number of timestamp entries in the heap.
     #[must_use]
     pub const fn count(&self) -> usize {
         self.count
     }
 
+    /// Resolves a checked range into owned timestamp values.
     pub fn resolve(&self, range: Range<usize>) -> Result<Vec<u64>, Error> {
         if range.start > range.end || range.end > self.count {
             return Err(Error::unsupported("counter resolve range is out of bounds"));

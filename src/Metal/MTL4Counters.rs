@@ -1,3 +1,4 @@
+use super::CompletionToken;
 use crate::Error;
 use std::ops::Range;
 
@@ -20,11 +21,15 @@ impl TimestampCounterHeap {
         self.inner.count()
     }
 
-    /// Resolves a checked range of GPU timestamps into owned Rust values.
+    /// Resolves a checked range of GPU timestamps after command completion.
     ///
     /// The caller is responsible only for logical GPU synchronization; no raw
     /// memory or Objective-C lifetime is exposed by this operation.
-    pub fn resolve(&self, range: Range<usize>) -> Result<Vec<u64>, Error> {
+    pub fn resolve(
+        &self,
+        range: Range<usize>,
+        _completion: &CompletionToken<'_>,
+    ) -> Result<Vec<u64>, Error> {
         if range.start > range.end || range.end > self.count() {
             return Err(Error::invalid_argument("counter range is out of bounds"));
         }

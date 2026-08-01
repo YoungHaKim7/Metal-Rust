@@ -1,5 +1,6 @@
 #![allow(unsafe_code)]
 #![deny(unsafe_op_in_unsafe_fn)]
+#![deny(missing_docs)]
 
 //! Audited Objective-C interoperability boundary for `metal-rust`.
 //!
@@ -15,4 +16,11 @@ mod foundation;
 mod metal;
 
 pub use foundation::Error;
-pub use metal::{CaptureSession, Device, MAX_TIMESTAMP_COUNTERS, TimestampCounterHeap};
+pub use metal::{
+    BlitCommandEncoder, Buffer, CaptureSession, ClearColor, CommandBuffer, CommandBufferStatus,
+    CommandQueue, CompileOptions, ComputeCommandEncoder, ComputePassDescriptor,
+    ComputePipelineState, Device, Function, Library, MAX_TIMESTAMP_COUNTERS, Origin, PixelFormat,
+    PrimitiveType, Region, RenderCommandEncoder, RenderPassDescriptor, RenderPipelineDescriptor,
+    RenderPipelineState, ResourceOptions, Size, StorageMode, Texture, TextureDescriptor,
+    TextureType, TextureUsage, TimestampCounterHeap, Viewport,
+};

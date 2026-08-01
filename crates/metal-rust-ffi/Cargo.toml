@@ -23,12 +23,7 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = [
   "NSString",
   "NSURL",
 ] }
-objc2-metal = { version = "0.3.2", default-features = false, features = [
-  "std",
-  "MTL4Counters",
-  "MTLCaptureManager",
-  "MTLDevice",
-] }
+objc2-metal = { version = "0.3.2", features = ["std"] }
 
 [lints.rust]
 unsafe_code = "allow"

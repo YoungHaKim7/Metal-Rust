@@ -30,7 +30,9 @@ impl Error {
 
     pub(crate) fn from_ffi(error: metal_rust_ffi::Error) -> Self {
         Self {
-            kind: if error.code.is_some() {
+            kind: if error.invalid_argument {
+                ErrorKind::InvalidArgument
+            } else if error.code.is_some() {
                 ErrorKind::Metal
             } else {
                 ErrorKind::Unsupported
