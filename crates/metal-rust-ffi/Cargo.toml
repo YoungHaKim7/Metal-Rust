@@ -1,0 +1,42 @@
+[package]
+name = "metal-rust-ffi"
+version.workspace = true
+edition.workspace = true
+license-file = "../../LICENSE"
+rust-version.workspace = true
+repository.workspace = true
+description = "Audited Objective-C interoperability boundary for metal-rust"
+readme = "README.md"
+keywords = ["apple", "ffi", "metal", "metal4", "graphics"]
+categories = ["api-bindings", "graphics"]
+include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE"]
+publish = ["crates-io"]
+
+[dependencies]
+objc2 = "0.6.4"
+objc2-foundation = { version = "0.3.2", default-features = false, features = [
+  "std",
+  "NSData",
+  "NSError",
+  "NSObject",
+  "NSRange",
+  "NSString",
+  "NSURL",
+] }
+objc2-metal = { version = "0.3.2", default-features = false, features = [
+  "std",
+  "MTL4Counters",
+  "MTLCaptureManager",
+  "MTLDevice",
+] }
+
+[lints.rust]
+unsafe_code = "allow"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "deny"
+pedantic = "allow"
+
+[package.metadata.docs.rs]
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]

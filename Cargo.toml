@@ -1,0 +1,40 @@
+[workspace]
+members = [".", "crates/metal-rust-ffi"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+rust-version = "1.91"
+repository = "https://github.com/gamesir-labs/Metal-Rust"
+documentation = "https://docs.rs/metal-rust"
+
+[package]
+name = "metal-rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+documentation.workspace = true
+description = "Safe Rust interfaces for Apple Metal"
+readme = "README.md"
+keywords = ["apple", "gpu", "metal", "metal4", "graphics"]
+categories = ["api-bindings", "graphics"]
+include = ["/src/**", "/tests/**", "/Cargo.toml", "/README.md", "/LICENSE"]
+publish = ["crates-io"]
+
+[dependencies]
+metal-rust-ffi = { version = "0.1.0", path = "crates/metal-rust-ffi" }
+
+[package.metadata.docs.rs]
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+all = "deny"
+pedantic = "allow"
