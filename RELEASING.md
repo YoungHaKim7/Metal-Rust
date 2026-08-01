@@ -49,11 +49,18 @@ availability immediately before the first release.
 
 ## Publish
 
-GitHub release automation is intentionally deferred. When it is added, it must
-use the protected `crates-io` environment and the existing
-`CARGO_RELEASE_TOKEN` secret. The workflow must validate the tag and package
-versions, publish `metal-rust-ffi`, wait until Cargo can resolve the new
-version, dry-run `metal-rust`, and only then publish `metal-rust`.
+The manual `Publish crates.io release` GitHub workflow runs only on the
+organization's `self-macOS-runner`. It uses the protected `crates-io`
+environment and the `CARGO_RELEASE_TOKEN` secret. It does not install or switch
+Rust toolchains: the runner's active Rust and Cargo versions must be in the
+declared range `>=1.91.0, <2.0.0`, and rustfmt, Clippy, Xcode, the macOS SDK, and
+a supported host architecture must all be present.
+
+The workflow validates that the requested annotated tag points at the checked
+out commit and exactly matches both package versions. It then publishes
+`metal-rust-ffi`, waits until Cargo can resolve that exact version, dry-runs
+`metal-rust`, and only then publishes `metal-rust`. Trigger it manually and
+provide the release tag, for example `v0.1.0`.
 
 crates.io publication is permanent: a version cannot be overwritten or
 deleted. A broken release can only be yanked, so never bypass the dry-runs or

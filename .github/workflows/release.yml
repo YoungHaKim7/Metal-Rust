@@ -1,0 +1,137 @@
+name: Publish crates.io release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Annotated release tag, for example v0.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crates-io-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate and publish
+    runs-on: [self-hosted, self-macOS-runner]
+    timeout-minutes: 30
+    environment: crates-io
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_MIN_VERSION: 1.91.0
+      RUST_MAX_EXCLUSIVE: 2.0.0
+    steps:
+      - name: Check out annotated release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Probe self-hosted macOS environment
+        run: scripts/check-release-environment.sh "$RUST_MIN_VERSION" "$RUST_MAX_EXCLUSIVE"
+
+      - name: Validate release identity
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if ! printf '%s\n' "$RELEASE_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$'; then
+            printf 'invalid release tag: %s\n' "$RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          if [ "$(git cat-file -t "$RELEASE_TAG")" != tag ]; then
+            printf 'release ref must be an annotated tag: %s\n' "$RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          tag_commit=$(git rev-parse "$RELEASE_TAG^{}")
+          head_commit=$(git rev-parse HEAD)
+          if [ "$tag_commit" != "$head_commit" ]; then
+            printf 'release tag %s does not point at HEAD %s\n' "$RELEASE_TAG" "$head_commit" >&2
+            exit 1
+          fi
+
+          versions=$(cargo metadata --locked --no-deps --format-version 1 | python3 -c '
+          import json, sys
+          packages = {package["name"]: package for package in json.load(sys.stdin)["packages"]}
+          print(packages["metal-rust"]["version"])
+          print(packages["metal-rust-ffi"]["version"])
+          print(next(dependency["req"] for dependency in packages["metal-rust"]["dependencies"] if dependency["name"] == "metal-rust-ffi"))
+          ')
+          facade_version=$(printf '%s\n' "$versions" | sed -n '1p')
+          ffi_version=$(printf '%s\n' "$versions" | sed -n '2p')
+          ffi_requirement=$(printf '%s\n' "$versions" | sed -n '3p')
+
+          if [ "$facade_version" != "$ffi_version" ]; then
+            printf 'workspace package versions differ: metal-rust=%s, metal-rust-ffi=%s\n' \
+              "$facade_version" "$ffi_version" >&2
+            exit 1
+          fi
+          if [ "$ffi_requirement" != "=$ffi_version" ]; then
+            printf 'metal-rust must pin metal-rust-ffi exactly; found %s, expected =%s\n' \
+              "$ffi_requirement" "$ffi_version" >&2
+            exit 1
+          fi
+          if [ "$RELEASE_TAG" != "v$facade_version" ]; then
+            printf 'release tag %s does not match package version %s\n' \
+              "$RELEASE_TAG" "$facade_version" >&2
+            exit 1
+          fi
+          if [ -n "$(git status --porcelain --untracked-files=all)" ]; then
+            printf '%s\n' 'release checkout is dirty' >&2
+            git status --short >&2
+            exit 1
+          fi
+
+      - name: Verify source and implementation package
+        run: |
+          cargo fmt --all -- --check
+          cargo test --workspace --locked
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          scripts/check-commit-message.sh --self-test
+          cargo publish -p metal-rust-ffi --locked --dry-run
+          cargo package -p metal-rust --locked --list
+
+      - name: Publish implementation crate
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_RELEASE_TOKEN }}
+        run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            printf '%s\n' 'CARGO_RELEASE_TOKEN is not configured' >&2
+            exit 1
+          fi
+          cargo publish -p metal-rust-ffi --locked
+
+      - name: Wait for implementation package in crates.io index
+        run: |
+          version=$(cargo metadata --locked --no-deps --format-version 1 | python3 -c '
+          import json, sys
+          print(next(package["version"] for package in json.load(sys.stdin)["packages"] if package["name"] == "metal-rust-ffi"))
+          ')
+          retry=0
+          while [ "$retry" -lt 30 ]; do
+            if cargo info --registry crates-io "metal-rust-ffi@$version" >/dev/null 2>&1; then
+              exit 0
+            fi
+            retry=$((retry + 1))
+            sleep 10
+          done
+          printf 'metal-rust-ffi %s did not appear in the crates.io index\n' "$version" >&2
+          exit 1
+
+      - name: Verify and publish safe facade
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_RELEASE_TOKEN }}
+        run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            printf '%s\n' 'CARGO_RELEASE_TOKEN is not configured' >&2
+            exit 1
+          fi
+          cargo publish -p metal-rust --locked --dry-run
+          cargo publish -p metal-rust --locked

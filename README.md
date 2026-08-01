@@ -75,4 +75,5 @@ scripts/check-commit-message.sh --self-test
 ```
 
 See [RELEASING.md](RELEASING.md) for the crates.io publication order and
-release checks. GitHub CI and release automation are intentionally deferred.
+release checks. General pull-request CI is intentionally deferred; releases
+use a manual workflow on the organization's macOS runner.
