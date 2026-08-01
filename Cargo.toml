@@ -22,7 +22,19 @@ description = "Safe Rust interfaces for Apple Metal"
 readme = "README.md"
 keywords = ["apple", "gpu", "metal", "metal4", "graphics"]
 categories = ["api-bindings", "graphics"]
-include = ["/src/**", "/tests/**", "/Cargo.toml", "/README.md", "/LICENSE"]
+include = [
+    "/src/**",
+    "/tests/**",
+    "/api/**",
+    "/docs/**",
+    "/scripts/check-api-coverage.py",
+    "/scripts/check-safety.py",
+    "/scripts/generate_api_coverage.py",
+    "/scripts/generate_api_inventory.py",
+    "/Cargo.toml",
+    "/README.md",
+    "/LICENSE",
+]
 publish = ["crates-io"]
 
 [dependencies]
