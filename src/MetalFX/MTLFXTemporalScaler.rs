@@ -42,6 +42,135 @@ impl TemporalScalerDescriptor {
             .map_err(Error::from_ffi)
     }
 
+    /// Returns configured color, depth, motion, and output formats.
+    #[must_use]
+    pub fn texture_formats(&self) -> (PixelFormat, PixelFormat, PixelFormat, PixelFormat) {
+        self.inner.texture_formats()
+    }
+
+    /// Sets color, depth, motion, and output formats.
+    pub fn set_texture_formats(
+        &self,
+        color: PixelFormat,
+        depth: PixelFormat,
+        motion: PixelFormat,
+        output: PixelFormat,
+    ) {
+        self.inner.set_texture_formats(color, depth, motion, output);
+    }
+
+    /// Returns configured input dimensions.
+    #[must_use]
+    pub fn input_size(&self) -> (usize, usize) {
+        self.inner.input_size()
+    }
+
+    /// Sets non-zero input dimensions.
+    pub fn set_input_size(&self, width: usize, height: usize) -> Result<(), Error> {
+        self.inner
+            .set_input_size(width, height)
+            .map_err(Error::from_ffi)
+    }
+
+    /// Returns configured output dimensions.
+    #[must_use]
+    pub fn output_size(&self) -> (usize, usize) {
+        self.inner.output_size()
+    }
+
+    /// Sets non-zero output dimensions.
+    pub fn set_output_size(&self, width: usize, height: usize) -> Result<(), Error> {
+        self.inner
+            .set_output_size(width, height)
+            .map_err(Error::from_ffi)
+    }
+
+    /// Returns whether automatic exposure is enabled.
+    #[must_use]
+    pub fn auto_exposure_enabled(&self) -> bool {
+        self.inner.auto_exposure_enabled()
+    }
+
+    /// Sets automatic exposure behavior.
+    pub fn set_auto_exposure_enabled(&self, value: bool) {
+        self.inner.set_auto_exposure_enabled(value);
+    }
+
+    /// Returns whether input-content properties are enabled.
+    #[must_use]
+    pub fn input_content_properties_enabled(&self) -> bool {
+        self.inner.input_content_properties_enabled()
+    }
+
+    /// Sets input-content properties behavior.
+    pub fn set_input_content_properties_enabled(&self, value: bool) {
+        self.inner.set_input_content_properties_enabled(value);
+    }
+
+    /// Returns whether initialization must be synchronous.
+    #[must_use]
+    pub fn requires_synchronous_initialization(&self) -> bool {
+        self.inner.requires_synchronous_initialization()
+    }
+
+    /// Sets whether initialization must be synchronous.
+    pub fn set_requires_synchronous_initialization(&self, value: bool) {
+        self.inner.set_requires_synchronous_initialization(value);
+    }
+
+    /// Returns whether reactive masks are enabled.
+    #[must_use]
+    pub fn reactive_mask_texture_enabled(&self) -> bool {
+        self.inner.reactive_mask_texture_enabled()
+    }
+
+    /// Enables or disables reactive masks.
+    pub fn set_reactive_mask_texture_enabled(&self, value: bool) {
+        self.inner.set_reactive_mask_texture_enabled(value);
+    }
+
+    /// Returns the reactive-mask pixel format.
+    #[must_use]
+    pub fn reactive_mask_texture_format(&self) -> PixelFormat {
+        self.inner.reactive_mask_texture_format()
+    }
+
+    /// Sets the reactive-mask pixel format.
+    pub fn set_reactive_mask_texture_format(&self, value: PixelFormat) {
+        self.inner.set_reactive_mask_texture_format(value);
+    }
+
+    /// Returns the configured input-content scale range.
+    #[must_use]
+    pub fn input_content_scale_range(&self) -> (f32, f32) {
+        self.inner.input_content_scale_range()
+    }
+
+    /// Sets a finite positive input-content scale range.
+    pub fn set_input_content_scale_range(&self, min: f32, max: f32) -> Result<(), Error> {
+        self.inner
+            .set_input_content_scale_range(min, max)
+            .map_err(Error::from_ffi)
+    }
+
+    /// Returns whether motion vectors use output resolution.
+    #[must_use]
+    pub fn output_resolution_motion_vectors_enabled(&self) -> bool {
+        self.inner.output_resolution_motion_vectors_enabled()
+    }
+
+    /// Sets whether motion vectors use output resolution.
+    pub fn set_output_resolution_motion_vectors_enabled(&self, value: bool) {
+        self.inner
+            .set_output_resolution_motion_vectors_enabled(value);
+    }
+
+    /// Returns whether the device supports Metal 4 FX temporal scaling.
+    #[must_use]
+    pub fn supports_metal4_fx(&self, device: &Device) -> bool {
+        self.inner.supports_metal4_fx(&device.inner)
+    }
+
     /// Returns whether the installed MetalFX runtime supports the device.
     #[must_use]
     pub fn supports_device(&self, device: &Device) -> bool {
@@ -49,15 +178,17 @@ impl TemporalScalerDescriptor {
     }
 
     /// Returns the minimum supported input content scale.
-    #[must_use]
-    pub fn supported_input_content_min_scale(&self, device: &Device) -> f32 {
-        self.inner.supported_input_content_min_scale(&device.inner)
+    pub fn supported_input_content_min_scale(&self, device: &Device) -> Result<f32, Error> {
+        self.inner
+            .supported_input_content_min_scale(&device.inner)
+            .map_err(Error::from_ffi)
     }
 
     /// Returns the maximum supported input content scale.
-    #[must_use]
-    pub fn supported_input_content_max_scale(&self, device: &Device) -> f32 {
-        self.inner.supported_input_content_max_scale(&device.inner)
+    pub fn supported_input_content_max_scale(&self, device: &Device) -> Result<f32, Error> {
+        self.inner
+            .supported_input_content_max_scale(&device.inner)
+            .map_err(Error::from_ffi)
     }
 
     /// Creates a temporal scaler.
@@ -102,6 +233,60 @@ impl TemporalScaler {
     #[must_use]
     pub fn motion_texture_usage(&self) -> u64 {
         self.inner.motion_texture_usage()
+    }
+
+    /// Returns assigned color, depth, motion, and output textures.
+    #[must_use]
+    pub fn textures(
+        &self,
+    ) -> (
+        Option<Texture>,
+        Option<Texture>,
+        Option<Texture>,
+        Option<Texture>,
+    ) {
+        let (color, depth, motion, output) = self.inner.textures();
+        (
+            color.map(Texture::from_ffi),
+            depth.map(Texture::from_ffi),
+            motion.map(Texture::from_ffi),
+            output.map(Texture::from_ffi),
+        )
+    }
+
+    /// Returns the exposure texture.
+    #[must_use]
+    pub fn exposure_texture(&self) -> Option<Texture> {
+        self.inner.exposure_texture().map(Texture::from_ffi)
+    }
+
+    /// Sets the optional exposure texture.
+    pub fn set_exposure_texture(&self, value: Option<&Texture>) {
+        self.inner
+            .set_exposure_texture(value.map(|texture| &texture.inner));
+    }
+
+    /// Returns the reactive-mask texture.
+    #[must_use]
+    pub fn reactive_mask_texture(&self) -> Option<Texture> {
+        self.inner.reactive_mask_texture().map(Texture::from_ffi)
+    }
+
+    /// Sets the optional reactive-mask texture.
+    pub fn set_reactive_mask_texture(&self, value: Option<&Texture>) {
+        self.inner
+            .set_reactive_mask_texture(value.map(|texture| &texture.inner));
+    }
+
+    /// Returns the deprecated reactive texture usage value.
+    #[must_use]
+    pub fn reactive_texture_usage(&self) -> u64 {
+        self.inner.reactive_texture_usage()
+    }
+
+    /// Sets whether depth values are reversed.
+    pub fn set_depth_reversed(&self, value: bool) {
+        self.inner.set_depth_reversed(value);
     }
 
     /// Sets the input content dimensions after checking they are non-zero.
