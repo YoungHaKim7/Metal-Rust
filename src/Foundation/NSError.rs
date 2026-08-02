@@ -1,3 +1,4 @@
+use super::ErrorDomain;
 use std::fmt;
 
 /// High-level category for a Metal operation failure.
@@ -15,6 +16,7 @@ pub enum ErrorKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Error {
     kind: ErrorKind,
+    domain: Option<ErrorDomain>,
     code: Option<isize>,
     message: String,
 }
@@ -23,6 +25,7 @@ impl Error {
     pub(crate) fn invalid_argument(message: impl Into<String>) -> Self {
         Self {
             kind: ErrorKind::InvalidArgument,
+            domain: None,
             code: None,
             message: message.into(),
         }
@@ -37,6 +40,7 @@ impl Error {
             } else {
                 ErrorKind::Unsupported
             },
+            domain: error.domain.map(ErrorDomain::new),
             code: error.code,
             message: error.message,
         }
@@ -52,6 +56,12 @@ impl Error {
     #[must_use]
     pub const fn code(&self) -> Option<isize> {
         self.code
+    }
+
+    /// Returns the native NSError domain when Metal supplied one.
+    #[must_use]
+    pub fn domain(&self) -> Option<&ErrorDomain> {
+        self.domain.as_ref()
     }
 
     /// Returns an owned diagnostic message.
