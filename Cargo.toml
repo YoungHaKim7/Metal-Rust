@@ -3,7 +3,7 @@ members = [".", "crates/metal-rust-ffi"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 license = "Apache-2.0"
 rust-version = "1.91"
@@ -44,7 +44,7 @@ include = [
 publish = ["crates-io"]
 
 [dependencies]
-metal-rust-ffi = { version = "=0.1.0", path = "crates/metal-rust-ffi" }
+metal-rust-ffi = { version = "=1.0.0", path = "crates/metal-rust-ffi" }
 
 [dev-dependencies]
 static_assertions = "1.1.0"
