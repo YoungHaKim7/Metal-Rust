@@ -3,4 +3,4 @@
 #[path = "CAMetalLayer.rs"]
 mod ca_metal_layer;
 
-pub use ca_metal_layer::{Drawable, Layer};
+pub use ca_metal_layer::{ColorSpace, Drawable, Layer};
