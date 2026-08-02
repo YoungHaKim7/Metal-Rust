@@ -1,2 +1,4 @@
 /target/
 *.gputrace
+.DS_Store
+__pycache__/
