@@ -7,9 +7,25 @@ use objc2_metal::{
 
 /// A Metal pixel format supported by the safe API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct PixelFormat(u64);
+pub struct PixelFormat(pub(crate) u64);
 
 impl PixelFormat {
+    pub(crate) const fn from_system_raw(value: usize) -> Self {
+        Self(value as u64)
+    }
+
+    /// Returns the framework integer representation.
+    #[must_use]
+    pub const fn as_raw(self) -> usize {
+        self.0 as usize
+    }
+
+    /// Returns whether this value can be passed back to Metal.
+    #[must_use]
+    pub const fn is_valid(self) -> bool {
+        true
+    }
+
     /// An invalid or unset pixel format.
     pub const INVALID: Self = Self(0);
     /// Eight-bit normalized blue/green/red/alpha format.
@@ -42,9 +58,25 @@ impl Default for PixelFormat {
 
 /// Resource allocation options accepted by the safe API.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct ResourceOptions(u64);
+pub struct ResourceOptions(pub(crate) u64);
 
 impl ResourceOptions {
+    pub(crate) const fn from_system_raw(value: usize) -> Self {
+        Self(value as u64)
+    }
+
+    /// Returns the framework integer representation.
+    #[must_use]
+    pub const fn as_raw(self) -> usize {
+        self.0 as usize
+    }
+
+    /// Returns whether this option set originated from safe constants or Metal.
+    #[must_use]
+    pub const fn is_valid(self) -> bool {
+        true
+    }
+
     /// CPU and GPU share a coherent allocation.
     pub const SHARED: Self = Self(0);
     /// CPU and GPU use separate managed copies.
@@ -87,36 +119,134 @@ pub enum StorageMode {
     Memoryless,
 }
 
+impl StorageMode {
+    pub(crate) const fn try_from_system_raw(value: usize) -> Option<Self> {
+        match value {
+            0 => Some(Self::Shared),
+            1 => Some(Self::Managed),
+            2 => Some(Self::Private),
+            3 => Some(Self::Memoryless),
+            _ => None,
+        }
+    }
+
+    /// Returns the framework integer representation.
+    #[must_use]
+    pub const fn as_raw(self) -> usize {
+        match self {
+            Self::Shared => 0,
+            Self::Managed => 1,
+            Self::Private => 2,
+            Self::Memoryless => 3,
+        }
+    }
+
+    pub(crate) const fn is_valid(self) -> bool {
+        true
+    }
+}
+
 /// The dimensionality of a Metal texture.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum TextureType {
+    /// A one-dimensional texture.
+    D1,
+    /// An array of one-dimensional textures.
+    D1Array,
     /// A two-dimensional texture.
     #[default]
     D2,
     /// An array of two-dimensional textures.
     D2Array,
+    /// A multisampled two-dimensional texture.
+    D2Multisample,
+    /// An array of multisampled two-dimensional textures.
+    D2MultisampleArray,
     /// A three-dimensional texture.
     D3,
     /// A cube texture.
     Cube,
+    /// An array of cube textures.
+    CubeArray,
+    /// A texture backed by a linear texture buffer.
+    TextureBuffer,
 }
 
 impl TextureType {
-    pub(crate) const fn as_objc(self) -> MTLTextureType {
-        MTLTextureType(match self {
+    pub(crate) const fn try_from_system_raw(value: usize) -> Option<Self> {
+        match value {
+            0 => Some(Self::D1),
+            1 => Some(Self::D1Array),
+            2 => Some(Self::D2),
+            3 => Some(Self::D2Array),
+            4 => Some(Self::D2Multisample),
+            5 => Some(Self::Cube),
+            6 => Some(Self::CubeArray),
+            7 => Some(Self::D3),
+            8 => Some(Self::D2MultisampleArray),
+            9 => Some(Self::TextureBuffer),
+            _ => None,
+        }
+    }
+
+    /// Returns the framework integer representation.
+    #[must_use]
+    pub const fn as_raw(self) -> usize {
+        match self {
+            Self::D1 => 0,
+            Self::D1Array => 1,
             Self::D2 => 2,
             Self::D2Array => 3,
+            Self::D2Multisample => 4,
+            Self::Cube => 5,
+            Self::CubeArray => 6,
+            Self::D3 => 7,
+            Self::D2MultisampleArray => 8,
+            Self::TextureBuffer => 9,
+        }
+    }
+
+    pub(crate) const fn is_valid(self) -> bool {
+        true
+    }
+
+    pub(crate) const fn as_objc(self) -> MTLTextureType {
+        MTLTextureType(match self {
+            Self::D1 => 0,
+            Self::D1Array => 1,
+            Self::D2 => 2,
+            Self::D2Array => 3,
+            Self::D2Multisample => 4,
             Self::D3 => 7,
             Self::Cube => 5,
+            Self::CubeArray => 6,
+            Self::D2MultisampleArray => 8,
+            Self::TextureBuffer => 9,
         })
     }
 }
 
 /// Bit flags describing how a texture will be used.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct TextureUsage(u64);
+pub struct TextureUsage(pub(crate) u64);
 
 impl TextureUsage {
+    pub(crate) const fn from_system_raw(value: usize) -> Self {
+        Self(value as u64)
+    }
+
+    /// Returns the framework integer representation.
+    #[must_use]
+    pub const fn as_raw(self) -> usize {
+        self.0 as usize
+    }
+
+    /// Returns whether this option set originated from safe constants or Metal.
+    #[must_use]
+    pub const fn is_valid(self) -> bool {
+        true
+    }
+
     /// No usage hint.
     pub const UNKNOWN: Self = Self(0);
     /// The texture can be read by a shader.
@@ -148,7 +278,7 @@ impl Default for TextureUsage {
 }
 
 /// A three-dimensional unsigned texture origin.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Origin {
     /// The x coordinate.
     pub x: usize,
@@ -177,7 +307,7 @@ impl From<Origin> for MTLOrigin {
 }
 
 /// A three-dimensional unsigned Metal size.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Size {
     /// The width.
     pub width: usize,
@@ -210,7 +340,7 @@ impl From<Size> for MTLSize {
 }
 
 /// A rectangular region in a texture or dispatch grid.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Region {
     /// The region origin.
     pub origin: Origin,
@@ -223,6 +353,31 @@ impl Region {
     #[must_use]
     pub const fn new(origin: Origin, size: Size) -> Self {
         Self { origin, size }
+    }
+
+    /// Creates a one-dimensional region.
+    #[must_use]
+    pub const fn new_1d(x: usize, width: usize) -> Self {
+        Self::new(Origin::new(x, 0, 0), Size::new(width, 1, 1))
+    }
+
+    /// Creates a two-dimensional region.
+    #[must_use]
+    pub const fn new_2d(x: usize, y: usize, width: usize, height: usize) -> Self {
+        Self::new(Origin::new(x, y, 0), Size::new(width, height, 1))
+    }
+
+    /// Creates a three-dimensional region.
+    #[must_use]
+    pub const fn new_3d(
+        x: usize,
+        y: usize,
+        z: usize,
+        width: usize,
+        height: usize,
+        depth: usize,
+    ) -> Self {
+        Self::new(Origin::new(x, y, z), Size::new(width, height, depth))
     }
 }
 
@@ -288,7 +443,7 @@ impl From<Viewport> for MTLViewport {
 }
 
 /// A color used to clear a render target.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ClearColor {
     /// Red component.
     pub red: f64,
@@ -346,6 +501,40 @@ impl From<MTLCommandBufferStatus> for CommandBufferStatus {
     }
 }
 
+impl CommandBufferStatus {
+    #[allow(dead_code)]
+    pub(crate) const fn try_from_system_raw(value: usize) -> Option<Self> {
+        Some(match value {
+            0 => Self::NotEnqueued,
+            1 => Self::Enqueued,
+            2 => Self::Committed,
+            3 => Self::Scheduled,
+            4 => Self::Completed,
+            5 => Self::Error,
+            value => Self::Unknown(value as u64),
+        })
+    }
+
+    /// Returns the framework integer representation.
+    #[must_use]
+    pub const fn as_raw(self) -> usize {
+        match self {
+            Self::NotEnqueued => 0,
+            Self::Enqueued => 1,
+            Self::Committed => 2,
+            Self::Scheduled => 3,
+            Self::Completed => 4,
+            Self::Error => 5,
+            Self::Unknown(value) => value as usize,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) const fn is_valid(self) -> bool {
+        !matches!(self, Self::Unknown(_))
+    }
+}
+
 /// A primitive topology used by a render encoder.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum PrimitiveType {
@@ -362,6 +551,35 @@ pub enum PrimitiveType {
 }
 
 impl PrimitiveType {
+    #[allow(dead_code)]
+    pub(crate) const fn try_from_system_raw(value: usize) -> Option<Self> {
+        match value {
+            0 => Some(Self::Point),
+            1 => Some(Self::Line),
+            2 => Some(Self::LineStrip),
+            3 => Some(Self::Triangle),
+            4 => Some(Self::TriangleStrip),
+            _ => None,
+        }
+    }
+
+    /// Returns the framework integer representation.
+    #[must_use]
+    pub const fn as_raw(self) -> usize {
+        match self {
+            Self::Point => 0,
+            Self::Line => 1,
+            Self::LineStrip => 2,
+            Self::Triangle => 3,
+            Self::TriangleStrip => 4,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) const fn is_valid(self) -> bool {
+        true
+    }
+
     pub(crate) const fn as_objc(self) -> MTLPrimitiveType {
         MTLPrimitiveType(match self {
             Self::Point => 0,
