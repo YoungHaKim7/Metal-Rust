@@ -21,6 +21,13 @@ unchecked addresses cannot cross that boundary. The application-facing
 `metal-rust` crate has `#![forbid(unsafe_code)]` and exposes only the checked
 facade.
 
+Inventory-driven generators may emit safe value types and owned object wrappers,
+but generation alone is not method coverage. A generated property method counts
+only when its selector is checked at runtime and its ABI shape is restricted to
+an audited primitive, validated enum/option set, owned string, or typed RAII
+object. Numeric setters without a framework-independent validity rule, callback
+methods, and pointer/buffer methods remain unimplemented for handwritten slices.
+
 Overloads that differ only in C++ ownership or callback spelling are combined
 when Rust can express the same operation more clearly. Such a replacement is
 recorded as `substitute` in `api/coverage.json`; it is not an omission.
@@ -42,15 +49,31 @@ Owned wrappers retain their underlying framework objects and release them by
 normal Rust drop order. A command encoder borrows its command buffer mutably;
 the borrow prevents commit or a second encoder while encoding is active. Drop
 also ends an encoder that was not explicitly ended. A command buffer is
-explicitly committed and can then be synchronously waited on. The wait returns
-a lifetime-bound `CompletionToken`; GPU-written buffer, texture, and counter
-readback requires that token, so the synchronization precondition is visible
-in the Rust type signature.
+explicitly committed and can then be synchronously waited on. Resource
+readback remains unavailable until the implementation can prove that the
+specific resource, rather than merely an arbitrary command buffer, has
+completed all GPU access.
 
 Resource helpers never expose a raw mapped pointer. Buffer writes require a
-CPU-visible storage mode and a checked range. Texture readback requires a
-checked region and row stride, and callers receive an owned byte vector. The
-facade does not add `Send` or `Sync` implementations for Metal objects.
+CPU-visible storage mode and a checked range. Buffer, texture, and counter
+readback will be added only with resource-specific synchronization and complete
+layout validation.
+
+## Thread-safety policy
+
+Every owned Objective-C object wrapper is `!Send + !Sync` by default. The FFI
+wrapper carries a private `ThreadBound` marker, and the facade inherits that
+property by owning the FFI wrapper. This is deliberate even when the current
+binding type would otherwise acquire an automatic `Send` or `Sync`
+implementation.
+
+The explicit cross-thread allowlist is currently empty. Adding an entry
+requires a per-type audit that cites Apple's thread-safety contract, checks all
+methods exposed by Metal-Rust, and places an English `SAFETY` explanation next
+to the internal implementation. General Objective-C retain/release thread
+safety, callback delivery on arbitrary queues, or observed application behavior
+is not sufficient evidence. Public unsafe traits or caller-provided thread
+safety promises are never part of this mechanism.
 
 The implementation is organized in vertical slices. A slice is complete only
 when its FFI wrapper, safe facade, availability/error behavior, documentation,

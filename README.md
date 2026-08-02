@@ -14,16 +14,26 @@ message-send invariants private implementation details.
 - Public APIs return owned Rust values and typed RAII objects. They never expose
   Objective-C pointers, selectors, `NSError **`, retain/release, or unchecked
   ranges.
-- APIs whose safety depends on GPU synchronization are not exposed until a
-  safe synchronization token can express the precondition.
+- APIs whose safety depends on GPU synchronization remain unavailable until
+  resource use and command completion can be tied together by the type system.
 
 The safe facade covers the core Metal submission/resource path, Metal 4
-timestamp CounterHeap resolution, device-wide capture, MetalFX spatial and
+timestamp CounterHeap ownership, device-wide capture, MetalFX spatial and
 temporal scaler descriptors, and CAMetalLayer drawable ownership. The full
 metal-cpp reference inventory is tracked in
 [`api/metal-cpp-inventory.json`](api/metal-cpp-inventory.json), with one
-explicit implementation, availability, or safe-substitute mapping per
-declaration in [`api/coverage.json`](api/coverage.json).
+explicit implemented or unimplemented status per declaration in
+[`api/coverage.json`](api/coverage.json). Only audited facade mappings count as
+coverage; a transitive generated binding does not.
+
+The audited generated layer currently supplies owned opaque wrappers, safe
+scalar and struct representations, non-callback aliases, runtime-gated default
+constructors, and checked property accessors. Generated `try_*` getters return
+`None` when a selector is unavailable; enum setters reject undeclared values,
+floating-point setters reject non-finite values, and object/string setters keep
+all Objective-C ownership inside `metal-rust-ffi`. Methods involving callbacks,
+raw buffers, synchronization, or API-specific numeric constraints remain
+explicitly `unimplemented` until their contracts are represented safely.
 
 ## Source layout
 
@@ -68,14 +78,14 @@ framework spelling for direct comparison with metal-cpp and SDK declarations.
 The normal workflow is entirely safe Rust: create a `Device` and
 `CommandQueue`, allocate shared `Buffer`/`Texture` resources, compile a
 `Library` and `Function`, build a pipeline, encode render/compute/blit work,
-then commit and wait on the `CommandBuffer`; the returned `CompletionToken`
-is required for GPU-written readback. `Layer::next_drawable` and
+then commit and wait on the `CommandBuffer`. GPU-written resource readback is
+intentionally not exposed yet: completion of an unrelated command buffer is
+not proof that a particular resource is idle. `Layer::next_drawable` and
 `CommandBuffer::present_drawable` cover presentation when Core Animation can
 provide a drawable. `CaptureSession`, MetalFX descriptors, and the Metal 4
 counter heap return owned `Error` values when the installed runtime does not
-support the requested capability. Shared buffer readback is available only
-after command completion; private and managed storage never exposes an
-unchecked mapped pointer.
+support the requested capability. No resource readback API exposes mapped GPU
+memory before a resource-specific synchronization model is implemented.
 
 ## Reference
 
