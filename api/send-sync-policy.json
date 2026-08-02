@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "types": [
+    {
+      "type": "metal_rust::Device",
+      "send": false,
+      "sync": false,
+      "evidence": "No Apple thread-safety contract is recorded for the complete safe wrapper; crate::ThreadBound prevents automatic traits."
+    },
+    {
+      "type": "metal_rust::CommandQueue",
+      "send": false,
+      "sync": false,
+      "evidence": "No Apple thread-safety contract is recorded for the complete safe wrapper; crate::ThreadBound prevents automatic traits."
+    },
+    {
+      "type": "metal_rust::Library",
+      "send": false,
+      "sync": false,
+      "evidence": "No Apple thread-safety contract is recorded for the complete safe wrapper; crate::ThreadBound prevents automatic traits."
+    },
+    {
+      "type": "metal_rust::RenderPipelineState",
+      "send": false,
+      "sync": false,
+      "evidence": "No Apple thread-safety contract is recorded for the complete safe wrapper; crate::ThreadBound prevents automatic traits."
+    },
+    {
+      "type": "metal_rust::ComputePipelineState",
+      "send": false,
+      "sync": false,
+      "evidence": "No Apple thread-safety contract is recorded for the complete safe wrapper; crate::ThreadBound prevents automatic traits."
+    },
+    {
+      "type": "metal_rust::Buffer",
+      "send": false,
+      "sync": false,
+      "evidence": "No Apple thread-safety contract is recorded for the complete safe wrapper; crate::ThreadBound prevents automatic traits."
+    },
+    {
+      "type": "metal_rust::Texture",
+      "send": false,
+      "sync": false,
+      "evidence": "No Apple thread-safety contract is recorded for the complete safe wrapper; crate::ThreadBound prevents automatic traits."
+    },
+    {
+      "type": "metal_rust::CommandBuffer",
+      "send": false,
+      "sync": false,
+      "evidence": "No Apple thread-safety contract is recorded for the complete safe wrapper; crate::ThreadBound prevents automatic traits."
+    }
+  ]
+}

@@ -5,9 +5,24 @@ use metal_rust::{
     ResourceOptions, Size, SpatialScalerDescriptor, TemporalScalerDescriptor, TextureDescriptor,
     TextureUsage,
 };
+use static_assertions::assert_not_impl_any;
+
+assert_not_impl_any!(metal_rust::Device: Send, Sync);
+assert_not_impl_any!(metal_rust::CommandQueue: Send, Sync);
+assert_not_impl_any!(metal_rust::Library: Send, Sync);
+assert_not_impl_any!(metal_rust::RenderPipelineState: Send, Sync);
+assert_not_impl_any!(metal_rust::ComputePipelineState: Send, Sync);
+assert_not_impl_any!(metal_rust::Buffer: Send, Sync);
+assert_not_impl_any!(metal_rust::Texture: Send, Sync);
+assert_not_impl_any!(metal_rust::CommandBuffer: Send, Sync);
 
 #[test]
 fn checked_value_constructors_are_stable() {
+    fn assert_owned_clone<T: Clone>() {}
+
+    assert_owned_clone::<metal_rust::metal::Heap>();
+    assert_owned_clone::<metal_rust::metal4::CommandQueue>();
+    assert_owned_clone::<metal_rust::foundation::NotificationName>();
     let region = Region::new(Origin::new(1, 2, 0), Size::new(8, 4, 1));
     assert_eq!(region.size.width, 8);
     assert_ne!(
@@ -20,6 +35,100 @@ fn checked_value_constructors_are_stable() {
     );
     assert_eq!(ResourceOptions::SHARED, ResourceOptions::default());
     assert_eq!(ClearColor::new(0.1, 0.2, 0.3, 1.0).alpha, 1.0);
+    assert_eq!(
+        metal_rust::metal::CPUCacheMode::CPUCacheModeWriteCombined.as_raw(),
+        1
+    );
+    let usage = metal_rust::metal::ResourceUsage::ResourceUsageRead
+        | metal_rust::metal::ResourceUsage::ResourceUsageWrite;
+    assert_ne!(usage.as_raw(), 0);
+    let sizes = metal_rust::metal::AccelerationStructureSizes {
+        acceleration_structure_size: 1024,
+        build_scratch_buffer_size: 512,
+        refit_scratch_buffer_size: 256,
+    };
+    assert_eq!(sizes.acceleration_structure_size, 1024);
+
+    assert!(metal_rust::metal::CPUCacheMode::try_from(1usize).is_ok());
+    assert!(metal_rust::metal::CPUCacheMode::try_from(99usize).is_err());
+    assert!(metal_rust::metal::ResourceUsage::from_bits(3).is_some());
+    assert!(metal_rust::metal::ResourceUsage::from_bits(usize::MAX).is_none());
+
+    let _: metal_rust::foundation::TimeInterval = 0.5;
+}
+
+#[test]
+fn foundation_native_substitutes_and_owned_objects_are_safe() {
+    use metal_rust::foundation::{
+        Array, Bundle, COCOA_ERROR_DOMAIN, Condition, Number, ProcessInfo, StringExt, URL,
+    };
+
+    let values: Array<u32> = vec![1, 2, 3];
+    assert_eq!(values.len(), 3);
+    let cloned_values = values.clone();
+    assert_eq!(cloned_values.into_iter().sum::<u32>(), 6);
+    drop(values);
+    assert_eq!("Metal".character(1), Some('e'));
+    assert_eq!(Number::from(42_u64).as_u64(), 42);
+    assert_eq!(COCOA_ERROR_DOMAIN.as_str(), "NSCocoaErrorDomain");
+
+    let condition = Condition::new();
+    condition.signal();
+    condition.wait();
+
+    let path = std::env::temp_dir().join("metal-rust-foundation-url");
+    let url = URL::from_file_path(&path).expect("UTF-8 temporary path");
+    assert_eq!(url.file_path(), path);
+
+    let process = ProcessInfo::current();
+    assert!(process.process_identifier() > 0);
+    assert!(process.processor_count() > 0);
+    assert!(process.active_processor_count() > 0);
+    assert!(process.physical_memory() > 0);
+
+    let bundle = Bundle::main();
+    let _ = bundle.is_loaded();
+
+    let center = metal_rust::foundation::NotificationCenter::default_center();
+    let deliveries = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let callback_deliveries = std::sync::Arc::clone(&deliveries);
+    let registration = center.add_observer("MetalRustSafeNotification", move |notification| {
+        assert_eq!(notification.name(), "MetalRustSafeNotification");
+        callback_deliveries.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    });
+    center.post("MetalRustSafeNotification");
+    assert_eq!(deliveries.load(std::sync::atomic::Ordering::SeqCst), 1);
+    drop(registration);
+    center.post("MetalRustSafeNotification");
+    assert_eq!(deliveries.load(std::sync::atomic::Ordering::SeqCst), 1);
+}
+
+#[test]
+fn generated_descriptor_properties_are_runtime_checked() {
+    use metal_rust::metal::{ComputePipelineDescriptor, SamplerAddressMode, SamplerDescriptor};
+
+    if let Ok(sampler) = SamplerDescriptor::new() {
+        sampler.set_normalized_coordinates(false).unwrap();
+        assert!(!sampler.normalized_coordinates().unwrap());
+        sampler
+            .set_s_address_mode(SamplerAddressMode::SamplerAddressModeClampToEdge)
+            .unwrap();
+        assert_eq!(
+            sampler.s_address_mode().unwrap(),
+            SamplerAddressMode::SamplerAddressModeClampToEdge
+        );
+        assert!(sampler.set_lod_min_clamp(f32::NAN).is_err());
+        sampler.set_lod_min_clamp(0.5).unwrap();
+        assert_eq!(sampler.lod_min_clamp().unwrap(), 0.5);
+    }
+
+    if let Ok(pipeline) = ComputePipelineDescriptor::new() {
+        pipeline.set_label("generated-safe-property").unwrap();
+        assert_eq!(
+            pipeline.label().unwrap().as_deref(),
+            Some("generated-safe-property")
+        );
+    }
 }
 
 #[test]
@@ -140,6 +249,16 @@ fn metalfx_scaler_creation_is_runtime_gated() {
             2160,
         )
         .expect("valid temporal configuration");
+    match temporal.supported_input_content_min_scale(&device) {
+        Ok(minimum) => assert!(minimum.is_finite() && minimum > 0.0),
+        Err(error) if error.kind() == ErrorKind::Unsupported => return,
+        Err(error) => panic!("unexpected temporal minimum-scale error: {error}"),
+    }
+    match temporal.supported_input_content_max_scale(&device) {
+        Ok(maximum) => assert!(maximum.is_finite() && maximum > 0.0),
+        Err(error) if error.kind() == ErrorKind::Unsupported => return,
+        Err(error) => panic!("unexpected temporal maximum-scale error: {error}"),
+    }
     if temporal.supports_device(&device) {
         let scaler = match temporal.new_scaler(&device) {
             Ok(scaler) => scaler,
@@ -155,7 +274,14 @@ fn metalfx_scaler_creation_is_runtime_gated() {
 
 #[test]
 fn metal_layer_is_owned_and_configurable_without_a_device() {
-    let layer = Layer::new();
+    let layer = match Layer::new() {
+        Ok(layer) => layer,
+        Err(error) if error.kind() == ErrorKind::InvalidArgument => {
+            assert!(error.message().contains("main thread"));
+            return;
+        }
+        Err(error) => panic!("unexpected layer error: {error}"),
+    };
     layer.set_pixel_format(PixelFormat::BGRA8_UNORM);
     assert!(layer.device().is_none());
 }
@@ -227,12 +353,23 @@ fn core_submission_smoke_when_available() {
         Err(error) if error.kind() == ErrorKind::Unsupported => return,
         Err(error) => panic!("unexpected destination buffer error: {error}"),
     };
+    let private_destination = match device.new_buffer(64, ResourceOptions::PRIVATE) {
+        Ok(buffer) => buffer,
+        Err(error) if error.kind() == ErrorKind::Unsupported => return,
+        Err(error) => panic!("unexpected private destination error: {error}"),
+    };
     let mut command_buffer = match queue.command_buffer() {
         Ok(command_buffer) => command_buffer,
         Err(error) if error.kind() == ErrorKind::Unsupported => return,
         Err(error) => panic!("unexpected command buffer error: {error}"),
     };
-    {
+    let (completion_sender, completion_receiver) = std::sync::mpsc::channel();
+    command_buffer
+        .on_complete(move |result| {
+            let _ = completion_sender.send(result);
+        })
+        .expect("completion handler registration");
+    let (readback, mismatched_readback) = {
         let blit = match command_buffer.blit_encoder() {
             Ok(blit) => blit,
             Err(error) if error.kind() == ErrorKind::Unsupported => return,
@@ -240,22 +377,42 @@ fn core_submission_smoke_when_available() {
         };
         blit.copy_buffer(&buffer, 4, &destination, 8, 4)
             .expect("checked shared-buffer copy must encode");
+        blit.copy_buffer(&buffer, 4, &private_destination, 8, 4)
+            .expect("checked private-buffer copy must encode");
+        let readback = blit
+            .read_buffer(&private_destination, 8, 4)
+            .expect("private buffer readback uses staging");
+        let mismatched_readback = blit
+            .read_buffer(&private_destination, 8, 4)
+            .expect("second staged readback is recorded");
         blit.end_encoding();
-    }
-    command_buffer.commit();
-    let completion = command_buffer.wait_until_completed();
+        (readback, mismatched_readback)
+    };
+    let completed = command_buffer
+        .commit()
+        .wait()
+        .expect("command buffer completes");
     assert_eq!(
-        command_buffer.status(),
+        completed.status(),
         metal_rust::CommandBufferStatus::Completed,
-        "command buffer failed: {:?}",
-        command_buffer.error()
+        "command buffer did not complete"
     );
-    assert_eq!(
-        destination
-            .read(8, 4, &completion)
-            .expect("shared readback is valid"),
-        [1, 2, 3, 4]
-    );
+    assert_eq!(completed.resolve_buffer(readback).unwrap(), [1, 2, 3, 4]);
+    completion_receiver
+        .recv_timeout(std::time::Duration::from_secs(1))
+        .expect("completion callback delivery")
+        .expect("completion callback result");
+
+    let other_completed = queue
+        .command_buffer()
+        .expect("second command buffer")
+        .commit()
+        .wait()
+        .expect("second command buffer completes");
+    let mismatch = other_completed
+        .resolve_buffer(mismatched_readback)
+        .expect_err("submission identity mismatch must be rejected");
+    assert_eq!(mismatch.kind(), ErrorKind::InvalidArgument);
 }
 
 #[test]
@@ -378,20 +535,32 @@ fn shader_pipeline_and_render_compute_encoders_smoke_when_available() {
             .expect("triangle draw is valid");
         encoder.end_encoding();
     }
-    command_buffer.commit();
-    let completion = command_buffer.wait_until_completed();
+    let texture_readback = {
+        let blit = command_buffer.blit_encoder().expect("texture blit encoder");
+        let readback = blit
+            .read_texture(
+                &texture,
+                Region::new_2d(0, 0, texture.width(), texture.height()),
+            )
+            .expect("texture staging readback");
+        blit.end_encoding();
+        readback
+    };
+    let completed = command_buffer
+        .commit()
+        .wait()
+        .expect("command buffer completes");
     assert_eq!(
-        command_buffer.status(),
+        completed.status(),
         metal_rust::CommandBufferStatus::Completed,
-        "shader command buffer failed: {:?}",
-        command_buffer.error()
+        "shader command buffer did not complete"
     );
-    assert_eq!(
-        buffer
-            .read(0, 4, &completion)
-            .expect("shared readback is valid"),
-        42_u32.to_ne_bytes()
-    );
+    let image = completed
+        .resolve_texture(texture_readback)
+        .expect("texture readback resolves against its submission");
+    assert_eq!((image.width, image.height), (4, 4));
+    assert!(image.bytes_per_row >= 16);
+    assert_eq!(&image.bytes[..4], &[0, 0, 255, 255]);
 }
 
 #[test]
@@ -399,7 +568,11 @@ fn drawable_and_capture_paths_are_runtime_gated() {
     let Some(device) = Device::system_default() else {
         return;
     };
-    let layer = Layer::with_device(&device);
+    let layer = match Layer::with_device(&device) {
+        Ok(layer) => layer,
+        Err(error) if error.kind() == ErrorKind::InvalidArgument => return,
+        Err(error) => panic!("unexpected layer error: {error}"),
+    };
     layer.set_pixel_format(PixelFormat::BGRA8_UNORM);
     if let Ok(drawable) = layer.next_drawable() {
         let queue = match device.new_command_queue(None) {
@@ -409,8 +582,10 @@ fn drawable_and_capture_paths_are_runtime_gated() {
         };
         let mut command_buffer = queue.command_buffer().expect("drawable command buffer");
         command_buffer.present_drawable(&drawable);
-        command_buffer.commit();
-        command_buffer.wait_until_completed();
+        command_buffer
+            .commit()
+            .wait()
+            .expect("drawable command buffer completes");
     }
 
     let path = std::env::temp_dir().join(format!(
