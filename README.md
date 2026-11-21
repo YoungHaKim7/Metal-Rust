@@ -4,6 +4,9 @@ Safe Rust interfaces for Apple Metal. The API follows the same framework and
 protocol surface as Apple's metal-cpp, while making Objective-C ownership and
 message-send invariants private implementation details.
 
+- C++ Metal-cpp
+  -  https://github.com/apple/metal-cpp
+
 ## Safety boundary
 
 - The public `metal-rust` crate uses `#![forbid(unsafe_code)]`.
